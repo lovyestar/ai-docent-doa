@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>도아의 부스 발표실</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#22392f" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="stage"></canvas>
+      <div class="floor" aria-hidden="true"></div>
+
+      <div class="chalk-tools" aria-hidden="true">
+        <div class="tool-marker">
+          <span class="tool-marker-cap"></span>
+        </div>
+        <div class="tool-eraser"></div>
+      </div>
+
+      <div class="chalk-posters">
+        <button type="button" class="chalk-poster" id="posterOneBtn" aria-label="포스터 1 설명 듣기">
+          <span class="chalk-poster-magnet chalk-poster-magnet-red"></span>
+          <span class="chalk-poster-paper">
+            <span class="chalk-poster-photo" id="posterOnePhoto"></span>
+            <span class="chalk-poster-label">포스터</span>
+          </span>
+        </button>
+        <button type="button" class="chalk-poster" id="posterTwoBtn" aria-label="포스터 2 설명 듣기">
+          <span class="chalk-poster-magnet chalk-poster-magnet-blue"></span>
+          <span class="chalk-poster-paper">
+            <span class="chalk-poster-photo" id="posterTwoPhoto"></span>
+            <span class="chalk-poster-label">포스터</span>
+          </span>
+        </button>
+      </div>
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-badge">AI</span>
+          <span class="brand-text">도아의 부스 발표실</span>
+        </div>
+        <div class="topbar-sub">도아가 부스를 잘 이용할 수 있도록 안내 해줄게!</div>
+      </header>
+
+      <section class="panel panel-right" id="panelRight" aria-hidden="true">
+        <div class="panel-frame">
+          <div class="panel-gallery" id="panelRightGallery"></div>
+          <div class="panel-title" id="panelRightTitle">트래커</div>
+        </div>
+      </section>
+
+      <section class="panel panel-left" id="panelLeft" aria-hidden="true">
+        <div class="panel-frame">
+          <div class="panel-gallery" id="panelLeftGallery"></div>
+          <div class="panel-title" id="panelLeftTitle">포스터</div>
+        </div>
+      </section>
+
+      <div class="bottom-stack">
+        <div class="live-caption" id="liveCaption" aria-hidden="true">
+          <span class="live-dot"></span>
+          <span id="liveCaptionText"></span>
+        </div>
+
+        <div class="bubble-wrap" id="bubbleWrap">
+          <div class="bubble" id="bubble"><p id="bubbleText">아 우리 부스 구경오는 사람 없나~</p></div>
+        </div>
+
+        <footer class="dock">
+          <div class="dock-inner">
+            <div class="sample-chips" id="sampleChips"></div>
+            <div class="controls">
+              <form id="textForm" class="text-fallback" hidden>
+                <input id="textInput" type="text" placeholder="궁금한 것을 질문해 보세요" autocomplete="off" />
+                <button type="submit">물어보기</button>
+              </form>
+              <button id="micButton" class="mic-btn" type="button" aria-label="마이크로 질문하기">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </button>
+              <div class="mic-status" id="micStatus">눌러서 질문하기</div>
+            </div>
+          </div>
+        </footer>
+      </div>
+
+      <div class="credits" aria-hidden="true">
+        <span class="credits-label">떠든 사람</span>
+        <span>장현도</span>
+        <span>이하람</span>
+        <span>이지운</span>
+        <span>곽재원</span>
+      </div>
+
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="chalkboard">
+          <div class="chalk-spinner"></div>
+          <p>도아가 발표를 준비하는 중...</p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

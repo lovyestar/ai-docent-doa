@@ -1,0 +1,11 @@
+{
+  "name": "도아의 부스 발표실",
+  "short_name": "도아",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#22392f",
+  "background_color": "#22392f",
+  "display": "standalone"
+}

@@ -1,0 +1,13 @@
+name = "ai-docent-doa"
+main = "worker/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+preview_urls = false
+
+routes = [
+  { pattern = "doa.yestar.dev", custom_domain = true }
+]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"

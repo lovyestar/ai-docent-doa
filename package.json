@@ -1,0 +1,21 @@
+{
+  "name": "ai-docent-doa",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "server": "node --env-file=server/.env server/index.js",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "start": "node --env-file=server/.env server/index.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "vite": "^8.2.0",
+    "wrangler": "^4.120.1"
+  }
+}
