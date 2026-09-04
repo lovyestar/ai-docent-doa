@@ -130,11 +130,15 @@ function pickIdlePhrase() {
 // Rough upper bound on how long a line takes to say out loud, used
 // only to size the safety-net timer in speakAndScheduleReturn — actual
 // timing now comes from the real generated audio's 'ended' event.
+// Rate calibrated against afinfo-measured durations of the actual
+// ElevenLabs "도아" voice output (~6.3 chars/sec average); no upper
+// cap since this only guards against playback getting stuck, and a
+// cap shorter than the real clip would cut audio off mid-line.
 function estimateTalkDuration(text) {
   const lineCount = text.split("\n").length;
   const lineAdjustment = Math.min(2, lineCount - 1) * 18;
   const effectiveLength = Math.max(10, text.length - lineAdjustment);
-  return Math.min(13, Math.max(1.4, effectiveLength * 0.085));
+  return Math.max(1.4, effectiveLength * 0.16);
 }
 
 function setBubble(text) {
@@ -326,7 +330,7 @@ function enterAnswering(entry) {
     setBubble(entry.description);
   }
 
-  speakAndScheduleReturn(audioUrl, entry.description);
+  speakAndScheduleReturn(audioUrl, entry.speech || entry.description);
 }
 
 // Plays the real audio line and returns to idle when it actually
