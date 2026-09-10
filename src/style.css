@@ -321,6 +321,96 @@ body {
   display: block;
 }
 
+/* ---------- Ambient chalk-dust texture (purely decorative, sits
+   behind the avatar/canvas so it never competes with it) ---------- */
+.chalk-dust {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(1.5px 1.5px at 8% 18%, rgba(251, 243, 227, 0.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 22% 62%, rgba(251, 243, 227, 0.35), transparent 60%),
+    radial-gradient(1px 1px at 35% 30%, rgba(251, 243, 227, 0.4), transparent 60%),
+    radial-gradient(1.5px 1.5px at 62% 12%, rgba(251, 243, 227, 0.3), transparent 60%),
+    radial-gradient(1px 1px at 78% 40%, rgba(251, 243, 227, 0.4), transparent 60%),
+    radial-gradient(1.5px 1.5px at 90% 65%, rgba(251, 243, 227, 0.35), transparent 60%),
+    radial-gradient(1px 1px at 50% 80%, rgba(251, 243, 227, 0.3), transparent 60%),
+    radial-gradient(1.5px 1.5px at 15% 85%, rgba(251, 243, 227, 0.3), transparent 60%);
+}
+
+/* ---------- Chalk doodle cluster — top-right corner, well clear of
+   the posters (top-left) and the avatar (center), so it just fills
+   otherwise-empty board without competing with either ---------- */
+.chalk-doodles {
+  position: absolute;
+  top: clamp(64px, 9vh, 90px);
+  right: clamp(20px, 4vw, 54px);
+  z-index: 11;
+  width: 120px;
+  height: 90px;
+  pointer-events: none;
+  color: rgba(251, 243, 227, 0.55);
+}
+
+.doodle {
+  position: absolute;
+}
+
+.doodle-bulb {
+  top: 8px;
+  right: 4px;
+  width: 34px;
+  height: 48px;
+  color: rgba(255, 209, 102, 0.55);
+  transform: rotate(6deg);
+}
+
+.doodle-star {
+  width: 16px;
+  height: 16px;
+  animation: doodleTwinkle 3.2s ease-in-out infinite;
+}
+
+.doodle-star-1 {
+  top: 2px;
+  right: 58px;
+  animation-delay: 0.4s;
+}
+
+.doodle-star-2 {
+  top: 46px;
+  right: 92px;
+  width: 11px;
+  height: 11px;
+  animation-delay: 1.6s;
+}
+
+.doodle-note {
+  position: absolute;
+  top: 58px;
+  right: 0;
+  width: 78px;
+  font-family: var(--font-hand);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  transform: rotate(-4deg);
+  color: rgba(255, 209, 102, 0.5);
+}
+
+@keyframes doodleTwinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
 /* ---------- Topbar ---------- */
 .topbar {
   position: absolute;
