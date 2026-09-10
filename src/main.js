@@ -267,9 +267,11 @@ function enterAnswering(entry) {
 
   if (entry.category === "general") {
     // A question outside the booth's DB, answered live by the LLM
-    // instead of the canned "I don't know that" line — text only, no
-    // pre-generated audio exists for this, so just display it and
-    // time the return-to-idle off the text itself.
+    // instead of the canned "I don't know that" line. The backend
+    // synthesizes audio for this on the spot (best-effort — entry
+    // .audioUrl is null if ElevenLabs wasn't reachable/configured),
+    // so speak it like a normal answer when we have it, and only fall
+    // back to the text-only timer when we don't.
     hidePanels();
     avatar.setTargetX(CENTER_X);
     avatar.play("nod", {
@@ -280,7 +282,11 @@ function enterAnswering(entry) {
       },
     });
     setBubble(entry.description);
-    scheduleTextOnlyReturn(entry.description);
+    if (entry.audioUrl) {
+      speakAndScheduleReturn(entry.audioUrl, entry.description);
+    } else {
+      scheduleTextOnlyReturn(entry.description);
+    }
     return;
   }
 

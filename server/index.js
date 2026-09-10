@@ -3,7 +3,10 @@ import { docentData } from "../src/data.js";
 
 const PORT = process.env.PORT || 3001;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const MODEL = "claude-haiku-4-5-20251001";
+const ELEVEN_VOICE_ID = "EV9NO6ZSnzhzdT8v4ALa"; // "도아" — designed voice, saved in ElevenLabs account
+const ELEVEN_MODEL_ID = "eleven_multilingual_v2";
 // A public kiosk mic shouldn't be able to hammer a paid API — one
 // classification per visitor question is plenty, so anything faster
 // than this from the same IP is almost certainly a double-fire, not a
@@ -53,9 +56,35 @@ app.use((req, res, next) => {
 
 const lastRequestAt = new Map();
 
+// Synthesizes a one-off line for a free-form LLM answer that has no
+// pre-generated mp3 (unlike docentData entries, which are rendered
+// offline by scripts/generate-tts.js). Returns null (never throws) so
+// a TTS hiccup just falls back to the text-only bubble.
+async function synthesizeSpeech(text) {
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}`, {
+      method: "POST",
+      headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        model_id: ELEVEN_MODEL_ID,
+        voice_settings: { stability: 0.45, similarity_boost: 0.85, style: 0.35 },
+      }),
+    });
+    if (!r.ok) {
+      console.error("ElevenLabs TTS error", r.status, await r.text());
+      return null;
+    }
+    return Buffer.from(await r.arrayBuffer()).toString("base64");
+  } catch (e) {
+    console.error("ElevenLabs TTS fetch failed", e);
+    return null;
+  }
+}
+
 app.post("/api/classify", async (req, res) => {
   const text = (req.body?.text || "").trim();
-  if (!text) return res.json({ entryId: null, generalAnswer: null });
+  if (!text) return res.json({ entryId: null, generalAnswer: null, audioBase64: null });
 
   const ip = req.ip;
   const now = Date.now();
@@ -109,7 +138,13 @@ app.post("/api/classify", async (req, res) => {
         const toolUse = data.content?.find((c) => c.type === "tool_use");
         const entryId = toolUse?.input?.entryId ?? null;
         const generalAnswer = entryId ? null : (toolUse?.input?.generalAnswer || null);
-        return res.json({ entryId, generalAnswer });
+
+        let audioBase64 = null;
+        if (!entryId && generalAnswer && ELEVENLABS_API_KEY) {
+          audioBase64 = await synthesizeSpeech(generalAnswer);
+        }
+
+        return res.json({ entryId, generalAnswer, audioBase64 });
       }
 
       console.error(`Anthropic API error (attempt ${attempt}/${MAX_ATTEMPTS})`, r.status, await r.text());

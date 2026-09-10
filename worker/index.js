@@ -2,11 +2,15 @@
 // deployment (dashboard build command: npm run build, deploy command:
 // npx wrangler deploy). Handles /api/classify itself and falls back to
 // the static assets binding (the Vite build in dist/, see wrangler.toml)
-// for everything else. Requires an ANTHROPIC_API_KEY secret set in the
-// Cloudflare dashboard (Settings → Variables and Secrets).
+// for everything else. Requires ANTHROPIC_API_KEY and ELEVENLABS_API_KEY
+// secrets set in the Cloudflare dashboard (Settings → Variables and
+// Secrets) — the latter is optional; without it, general-answer
+// questions still work, just as text-only (no synthesized audio).
 import { docentData } from "../src/data.js";
 
 const MODEL = "claude-haiku-4-5-20251001"; // haiku 토큰 살살 녹는다
+const ELEVEN_VOICE_ID = "EV9NO6ZSnzhzdT8v4ALa"; // "도아" — designed voice, saved in ElevenLabs account
+const ELEVEN_MODEL_ID = "eleven_multilingual_v2";
 // A public kiosk mic shouldn't be able to hammer a paid API — one
 // classification per visitor question is plenty, so anything faster
 // than this from the same IP is almost certainly a double-fire, not a
@@ -54,6 +58,44 @@ function json(body, status = 200) {
   });
 }
 
+function arrayBufferToBase64(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// Synthesizes a one-off line for a free-form LLM answer that has no
+// pre-generated mp3 (unlike docentData entries, which are rendered
+// offline by scripts/generate-tts.js). Routed through the same
+// region-pinned proxy as the classify call, on the chance ElevenLabs
+// has similar per-PoP quirks. Returns null (never throws) so a TTS
+// hiccup just falls back to the text-only bubble, same as before.
+async function synthesizeSpeech(proxyStub, apiKey, text) {
+  try {
+    const r = await proxyStub.fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}`, {
+      method: "POST",
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        model_id: ELEVEN_MODEL_ID,
+        voice_settings: { stability: 0.45, similarity_boost: 0.85, style: 0.35 },
+      }),
+    });
+    if (!r.ok) {
+      console.error("ElevenLabs TTS error", r.status, await r.text());
+      return null;
+    }
+    return arrayBufferToBase64(await r.arrayBuffer());
+  } catch (e) {
+    console.error("ElevenLabs TTS fetch failed", e);
+    return null;
+  }
+}
+
 async function classify(request, env) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -63,7 +105,7 @@ async function classify(request, env) {
 
   const body = await request.json().catch(() => ({}));
   const text = (body?.text || "").trim();
-  if (!text) return json({ entryId: null, generalAnswer: null });
+  if (!text) return json({ entryId: null, generalAnswer: null, audioBase64: null });
 
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const now = Date.now();
@@ -126,7 +168,13 @@ async function classify(request, env) {
         const toolUse = data.content?.find((c) => c.type === "tool_use");
         const entryId = toolUse?.input?.entryId ?? null;
         const generalAnswer = entryId ? null : (toolUse?.input?.generalAnswer || null);
-        return json({ entryId, generalAnswer });
+
+        let audioBase64 = null;
+        if (!entryId && generalAnswer && env.ELEVENLABS_API_KEY) {
+          audioBase64 = await synthesizeSpeech(proxyStub, env.ELEVENLABS_API_KEY, generalAnswer);
+        }
+
+        return json({ entryId, generalAnswer, audioBase64 });
       }
 
       console.error(`Anthropic API error (attempt ${attempt}/${MAX_ATTEMPTS})`, r.status, await r.text());
@@ -144,6 +192,7 @@ async function classify(request, env) {
 // (set once via the locationHint on the first `.get()` for its id),
 // so a fetch made from inside it always egresses from that region
 // instead of wherever the calling Worker's own invocation landed.
+// Shared by both the Anthropic and ElevenLabs calls above.
 export class ClassifyProxy {
   async fetch(request) {
     return fetch(request);
