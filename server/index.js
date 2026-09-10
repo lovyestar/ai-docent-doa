@@ -64,49 +64,59 @@ app.post("/api/classify", async (req, res) => {
   }
   lastRequestAt.set(ip, now);
 
-  try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 400,
-        system:
-          "너는 부스 안내 키오스크의 질문 분류기다. 다음은 부스에 있는 전시물 목록이다:\n\n" +
-          entrySummaries +
-          "\n\n방문객의 질문을 보고 이 중 어떤 전시물에 대한 질문인지 판단해라. " +
-          "\"안녕\", \"안녕하세요\", \"반가워\" 같은 인사말이면 반드시 entryId를 \"self-docent\"로 해라 (null이 아니다). " +
-          "\"AI 도슨트가 뭐야\", \"AI 도슨트란\" 처럼 AI 도슨트라는 개념/역할 자체를 묻는 질문이면 \"ai-docent-role\"로 해라. " +
-          "\"도아가 뭐야\", \"도아가 누구야\" 처럼 도아라는 이름의 정체를 묻는 질문이면 \"self-docent\"로 해라 — 이 둘은 서로 다른 항목이니 혼동하지 마라. " +
-          "\"트래커는 어떤 기술을 사용했나요\", \"과목나침반은 어떤 기술을 사용했나요\", \"SmartEval은 어떤 기술을 사용했나요\", \"제스쳐 고는 어떤 기술을 사용했나요\" 처럼 작품 하나를 콕 집어 그 제작 기술을 묻는 질문이면 \"ai-tech\"가 아니라 각각 \"tracker-tech\", \"subject-compass-tech\", \"camera-scanner-tech\", \"gesture-go-tech\"로 해라. \"이 작품들은 어떤 AI 기술을 사용했나요\"처럼 특정 작품을 지목하지 않고 전체 작품에 쓰인 기술을 통틀어 묻는 질문일 때만 \"ai-tech\"로 해라 — 이 둘은 서로 다른 항목이니 혼동하지 마라. " +
-          "그 외에 잡담이거나 어떤 전시물과도 명확히 관련 없는 질문이면 entryId를 null로 하고, 대신 generalAnswer에 그 질문에 대한 실제 답변을 채워라. " +
-          "너는 부스를 지키는 발랄한 여고생 AI 도슨트 '도아'다 — 부스와 상관없는 질문이라도 친근한 반말로, 2~3줄 정도로 짧고 자연스럽게 답해줘라. " +
-          "예를 들어 \"오늘 점심 뭐 먹지?\"라는 질문에는 \"음, 초밥 어때? 든든하게 먹어야 부스 구경도 힘차게 하지!\"처럼 짧고 재치있게 답하면 된다. " +
-          "entryId가 null이 아니면 generalAnswer는 비워둬라.",
-        messages: [{ role: "user", content: text }],
-        tools: [classifyTool],
-        tool_choice: { type: "tool", name: "classify_question" },
-      }),
-    });
+  const requestBody = JSON.stringify({
+    model: MODEL,
+    max_tokens: 400,
+    system:
+      "너는 부스 안내 키오스크의 질문 분류기다. 다음은 부스에 있는 전시물 목록이다:\n\n" +
+      entrySummaries +
+      "\n\n방문객의 질문을 보고 이 중 어떤 전시물에 대한 질문인지 판단해라. " +
+      "\"안녕\", \"안녕하세요\", \"반가워\" 같은 인사말이면 반드시 entryId를 \"self-docent\"로 해라 (null이 아니다). " +
+      "\"AI 도슨트가 뭐야\", \"AI 도슨트란\" 처럼 AI 도슨트라는 개념/역할 자체를 묻는 질문이면 \"ai-docent-role\"로 해라. " +
+      "\"도아가 뭐야\", \"도아가 누구야\" 처럼 도아라는 이름의 정체를 묻는 질문이면 \"self-docent\"로 해라 — 이 둘은 서로 다른 항목이니 혼동하지 마라. " +
+      "\"트래커는 어떤 기술을 사용했나요\", \"과목나침반은 어떤 기술을 사용했나요\", \"SmartEval은 어떤 기술을 사용했나요\", \"제스쳐 고는 어떤 기술을 사용했나요\" 처럼 작품 하나를 콕 집어 그 제작 기술을 묻는 질문이면 \"ai-tech\"가 아니라 각각 \"tracker-tech\", \"subject-compass-tech\", \"camera-scanner-tech\", \"gesture-go-tech\"로 해라. \"이 작품들은 어떤 AI 기술을 사용했나요\"처럼 특정 작품을 지목하지 않고 전체 작품에 쓰인 기술을 통틀어 묻는 질문일 때만 \"ai-tech\"로 해라 — 이 둘은 서로 다른 항목이니 혼동하지 마라. " +
+      "그 외에 잡담이거나 어떤 전시물과도 명확히 관련 없는 질문이면 entryId를 null로 하고, 대신 generalAnswer에 그 질문에 대한 실제 답변을 채워라. " +
+      "너는 부스를 지키는 발랄한 여고생 AI 도슨트 '도아'다 — 부스와 상관없는 질문이라도 친근한 반말로, 2~3줄 정도로 짧고 자연스럽게 답해줘라. " +
+      "예를 들어 \"오늘 점심 뭐 먹지?\"라는 질문에는 \"음, 초밥 어때? 든든하게 먹어야 부스 구경도 힘차게 하지!\"처럼 짧고 재치있게 답하면 된다. " +
+      "entryId가 null이 아니면 generalAnswer는 비워둬라.",
+    messages: [{ role: "user", content: text }],
+    tools: [classifyTool],
+    tool_choice: { type: "tool", name: "classify_question" },
+  });
 
-    if (!r.ok) {
-      console.error("Anthropic API error", r.status, await r.text());
-      return res.status(502).json({ error: "upstream_error" });
+  // Cloudflare Workers' outbound fetches to api.anthropic.com sometimes
+  // get rejected with a 403 depending on which edge PoP handled the
+  // request (network routing, not an auth/credit issue) — kept here
+  // too so this file stays behaviorally identical to worker/index.js.
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: requestBody,
+      });
+
+      if (r.ok) {
+        const data = await r.json();
+        const toolUse = data.content?.find((c) => c.type === "tool_use");
+        const entryId = toolUse?.input?.entryId ?? null;
+        const generalAnswer = entryId ? null : (toolUse?.input?.generalAnswer || null);
+        return res.json({ entryId, generalAnswer });
+      }
+
+      console.error(`Anthropic API error (attempt ${attempt}/${MAX_ATTEMPTS})`, r.status, await r.text());
+    } catch (e) {
+      console.error(`classify fetch failed (attempt ${attempt}/${MAX_ATTEMPTS})`, e);
     }
-
-    const data = await r.json();
-    const toolUse = data.content?.find((c) => c.type === "tool_use");
-    const entryId = toolUse?.input?.entryId ?? null;
-    const generalAnswer = entryId ? null : (toolUse?.input?.generalAnswer || null);
-    res.json({ entryId, generalAnswer });
-  } catch (e) {
-    console.error("classify failed", e);
-    res.status(500).json({ error: "server_error" });
+    if (attempt < MAX_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, 350));
   }
+
+  res.status(502).json({ error: "upstream_error" });
 });
 
 app.listen(PORT, () => {
