@@ -14,3 +14,11 @@ binding = "ASSETS"
 
 [placement]
 mode = "smart"
+
+[[durable_objects.bindings]]
+name = "CLASSIFY_PROXY"
+class_name = "ClassifyProxy"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ClassifyProxy"]

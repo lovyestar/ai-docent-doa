@@ -79,6 +79,9 @@ async function classify(request, env) {
       "너는 부스 안내 키오스크의 질문 분류기다. 다음은 부스에 있는 전시물 목록이다:\n\n" +
       entrySummaries +
       "\n\n방문객의 질문을 보고 이 중 어떤 전시물에 대한 질문인지 판단해라. " +
+      "이 텍스트는 실시간 음성 인식(STT)으로 받아쓴 것이라 발음이 비슷한 다른 단어로 잘못 받아써졌을 수 있다. " +
+      "글자 그대로의 뜻이 부스 전시물과 안 맞아 보여도, 발음이 비슷한 전시물 이름이나 키워드를 잘못 알아들은 건 아닌지 먼저 의심하고 그쪽으로 분류해라. " +
+      "예를 들어 \"광명건설\", \"광명 건설\", \"광명건축\" 같은 텍스트는 \"광명고\"를 잘못 알아들은 것일 가능성이 높으니 \"school-intro\"로 분류해라. " +
       "\"안녕\", \"안녕하세요\", \"반가워\" 같은 인사말이면 반드시 entryId를 \"self-docent\"로 해라 (null이 아니다). " +
       "\"AI 도슨트가 뭐야\", \"AI 도슨트란\" 처럼 AI 도슨트라는 개념/역할 자체를 묻는 질문이면 \"ai-docent-role\"로 해라. " +
       "\"도아가 뭐야\", \"도아가 누구야\" 처럼 도아라는 이름의 정체를 묻는 질문이면 \"self-docent\"로 해라 — 이 둘은 서로 다른 항목이니 혼동하지 마라. " +
@@ -92,16 +95,23 @@ async function classify(request, env) {
     tool_choice: { type: "tool", name: "classify_question" },
   });
 
-  // Cloudflare Workers execute at whichever edge PoP is nearest the
+  // A plain Worker executes at whichever edge PoP is nearest the
   // incoming request, and outbound fetches to api.anthropic.com from
-  // some PoPs (observed: Hong Kong) get rejected with a 403 even
-  // though the same key works fine everywhere else — a network-level
-  // routing issue, not an auth/credit problem. It's intermittent per
-  // request, so a couple of quick retries clears almost all of it.
+  // some PoPs (observed: Hong Kong, via `wrangler tail`) get rejected
+  // with a 403 even though the same key works every time from a
+  // normal server — a network-level routing/region issue, not an
+  // auth/credit problem, and retries within one Worker invocation
+  // don't help (they share the same egress path). Routing the actual
+  // fetch through a Durable Object pinned to a fixed North American
+  // location sidesteps it: that DO always runs in the same place
+  // regardless of which PoP received the visitor's request.
+  const proxyId = env.CLASSIFY_PROXY.idFromName("anthropic-classify");
+  const proxyStub = env.CLASSIFY_PROXY.get(proxyId, { locationHint: "enam" });
+
   const MAX_ATTEMPTS = 3;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const r = await proxyStub.fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "x-api-key": apiKey,
@@ -127,6 +137,17 @@ async function classify(request, env) {
   }
 
   return json({ error: "upstream_error" }, 502);
+}
+
+// Does nothing but forward whatever request it's given — its only
+// purpose is that Durable Objects execute in a single, fixed location
+// (set once via the locationHint on the first `.get()` for its id),
+// so a fetch made from inside it always egresses from that region
+// instead of wherever the calling Worker's own invocation landed.
+export class ClassifyProxy {
+  async fetch(request) {
+    return fetch(request);
+  }
 }
 
 export default {
