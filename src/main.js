@@ -265,6 +265,25 @@ function enterAnswering(entry) {
     return;
   }
 
+  if (entry.category === "general") {
+    // A question outside the booth's DB, answered live by the LLM
+    // instead of the canned "I don't know that" line — text only, no
+    // pre-generated audio exists for this, so just display it and
+    // time the return-to-idle off the text itself.
+    hidePanels();
+    avatar.setTargetX(CENTER_X);
+    avatar.play("nod", {
+      duration: 0.35,
+      loop: false,
+      onFinished: () => {
+        if (state === STATE.ANSWERING) avatar.play("stand", { duration: 0.5 });
+      },
+    });
+    setBubble(entry.description);
+    scheduleTextOnlyReturn(entry.description);
+    return;
+  }
+
   const audioUrl = `/audio/${entry.id}.mp3`;
 
   if (entry.category === "self") {
@@ -349,6 +368,18 @@ function speakAndScheduleReturn(audioUrl, text) {
   answerReturnTimer = setTimeout(() => {
     if (state === STATE.ANSWERING) enterIdle();
   }, safetyMs);
+}
+
+// No audio for a live LLM answer (no pre-generated mp3 exists for it),
+// so there's no 'ended' event to time the return off of — just give
+// the visitor a bit longer than the text would take to speak, so
+// there's time to actually read it.
+function scheduleTextOnlyReturn(text) {
+  clearTimeout(answerReturnTimer);
+  const displayMs = estimateTalkDuration(text) * 1000 + 4000;
+  answerReturnTimer = setTimeout(() => {
+    if (state === STATE.ANSWERING) enterIdle();
+  }, displayMs);
 }
 
 async function askQuestion(text) {
